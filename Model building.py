@@ -17,7 +17,7 @@ import multiprocessing
 
 
 physDevs=tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physDevs[0], enable=True)
+#tf.config.experimental.set_memory_growth(physDevs[0], enable=True)
 
 #def train(cnn):
     
@@ -26,18 +26,18 @@ tf.config.experimental.set_memory_growth(physDevs[0], enable=True)
 
 
 if __name__ == "__main__":
-    noUnits=300
-    noLayers=8
+    noUnits=128
+    noLayers=1
     acFunc='relu'
     optimize='adam'
-    lossfxn='MeanSquaredError'
-    tolerance=4
-    batchSize=1
+    lossfxn='mse'
+    tolerance=6
+    batchSize=4
     filtNo=3
-    kSize=[8,10]
+    kSize=(70,70)
     noEpochs=15
     unitsPerLayer=int(noUnits/noLayers)
-    targetShape=(1000,1000)
+    targetShape=(224,224)
     
     earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='loss',patience=tolerance,restore_best_weights=True,mode='min')
     fitArgs={'callbacks':earlyCallback,'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
@@ -98,45 +98,52 @@ if __name__ == "__main__":
         
     
     
-    cnn=tf.keras.Sequential()
+    # cnn=tf.keras.Sequential()
     
-    for i in range(noLayers):
-        #cnn.add(tf.keras.layers.Conv2D(
-        #    (filtNo),kSize,input_shape=(4124,5808,3,),kernel_initializer='glorot_uniform',use_bias=True,padding='valid'
-        #    ))
-        cnn.add(tf.keras.layers.Conv2D(
-            (filtNo),kSize,input_shape=(shp)))
-        cnn.add(tf.keras.layers.MaxPool2D(pool_size=kSize,strides=(1,1),padding='valid'))
+    # for i in range(noLayers):
+    #     #cnn.add(tf.keras.layers.Conv2D(
+    #     #    (filtNo),kSize,input_shape=(4124,5808,3,),kernel_initializer='glorot_uniform',use_bias=True,padding='valid'
+    #     #    ))
+    #     cnn.add(tf.keras.layers.Conv2D(
+    #         (filtNo),kSize,input_shape=(shp)))
+    #     cnn.add(tf.keras.layers.MaxPool2D(pool_size=kSize,strides=(1,1),padding='valid'))
         
-    #cnn.summary()
-    cnn.add(tf.keras.layers.Dense(
-         unitsPerLayer,activation=acFunc,use_bias=False))   
-    #cnn.add(tf.keras.layers.Dense(
-    #     unitsPerLayer,activation=acFunc,use_bias=False))   
-    #cnn.add(tf.keras.layers.Dense(
-    #     unitsPerLayer/2,activation=acFunc,use_bias=False))   
-    #cnn.add(tf.keras.layers.Dense(
-    #     unitsPerLayer/4,activation=acFunc,use_bias=False))   
-    cnn.add(tf.keras.layers.Flatten())
-    cnn.add(tf.keras.layers.Dense(4,activation='sigmoid'))
-    cnn.summary()
-        
-    cnn.compile(optimizer=optimize,loss=lossfxn)    
+    # #cnn.summary()
+    # cnn.add(tf.keras.layers.Dense(
+    #      50,activation=acFunc,use_bias=False))   
+    # #cnn.add(tf.keras.layers.Dense(
+    # #     unitsPerLayer,activation=acFunc,use_bias=False))   
+    # #cnn.add(tf.keras.layers.Dense(
+    # #     unitsPerLayer/2,activation=acFunc,use_bias=False))   
+    # #cnn.add(tf.keras.layers.Dense(
+    # #     unitsPerLayer/4,activation=acFunc,use_bias=False))   
+    # cnn.add(tf.keras.layers.Flatten())
+    # cnn.add(tf.keras.layers.Dense(4,activation='sigmoid'))
+    
+      
         
     data=np.array(data,dtype='float32')/255.00
     targets=np.array(targets,dtype='float32')
     
-    
-    
-
+    resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling=None)
+    flat=tf.keras.layers.Flatten()(resNet.output)
+    output1=tf.keras.layers.Dense(128,activation='relu')(flat)
+    output2=tf.keras.layers.Dense(4,activation='sigmoid')(output1)
+    cnn=tf.keras.models.Model(inputs=resNet.input,outputs=output2)
+ 
+        
+    cnn.compile(optimizer=optimize,loss=lossfxn)  
+    cnn.summary()
     
     #fitArgs.update(x=data,y=targets)
     #cnn.fit(x=data,y=targets,**fitArgs)
+    
+    
     cnn.fit(x=data,y=targets,**fitArgs) 
+    
     #cnn.save(modelPath,save_format="h5")
     
-    
-    
+
     # p=multiprocessing.Process(target=train,args=(rtrnModel))
     # p.start()
     # p.join()
