@@ -28,14 +28,14 @@ physDevs=tf.config.list_physical_devices('GPU')
 if __name__ == "__main__":
     noUnits=128
     noLayers=1
-    acFunc='relu'
+    acFunc='sigmoid'
     optimize='adam'
     lossfxn='mse'
     tolerance=6
     batchSize=4
     filtNo=3
     kSize=(70,70)
-    noEpochs=15
+    noEpochs=10☺0
     unitsPerLayer=int(noUnits/noLayers)
     targetShape=(224,224)
     
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling=None)
     flat=tf.keras.layers.Flatten()(resNet.output)
     output1=tf.keras.layers.Dense(128,activation='relu')(flat)
-    output2=tf.keras.layers.Dense(4,activation='sigmoid')(output1)
+    output2=tf.keras.layers.Dense(4,activation='linear')(output1)
     cnn=tf.keras.models.Model(inputs=resNet.input,outputs=output2)
  
         
@@ -150,16 +150,17 @@ if __name__ == "__main__":
     
     
     
-    # targ=[sX,sY,eX,eY]
-    # indivImP=os.path.sep.join([imPath,fileName])
-    # im = cv2.imread(indivImP)
-    # im = tf.keras.preprocessing.image.load_img(indivImP,target_size=targetShape)
-    # im = tf.keras.preprocessing.image.img_to_array(im)
-    # im=np.array(im)
-    # im=np.expand_dims(im,axis=0)
-    # pred=cnn.predict(im)
-    # print(targ)
-    # print(pred)
+    targ=[sX,sY,eX,eY]
+    indivImP=os.path.sep.join([imPath,fileName])
+    im = cv2.imread(indivImP)
+    im = tf.keras.preprocessing.image.load_img(indivImP,target_size=targetShape)
+    im = tf.keras.preprocessing.image.img_to_array(im)
+    im=np.array(im)
+    im=np.expand_dims(im,axis=0)
+    pred=cnn.predict(data)
+    print(targets)
+    print(pred)
+    print(targets-pred)
     
     
     
