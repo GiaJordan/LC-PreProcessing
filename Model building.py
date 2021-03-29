@@ -10,7 +10,7 @@ import os
 import tensorflow as tf
 import matplotlib as plt
 import cv2
-#import sklearn
+from sklearn.model_selection import train_test_split
 import numpy as np
 from numba import cuda
 import multiprocessing
@@ -31,15 +31,15 @@ if __name__ == "__main__":
     acFunc='sigmoid'
     optimize='adam'
     lossfxn='mse'
-    tolerance=6
-    batchSize=4
+    tolerance=10
+    batchSize=5
     filtNo=3
     kSize=(70,70)
-    noEpochs=10☺0
+    noEpochs=1000
     unitsPerLayer=int(noUnits/noLayers)
     targetShape=(224,224)
     
-    earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='loss',patience=tolerance,restore_best_weights=True,mode='min')
+    earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='val_loss',patience=tolerance,restore_best_weights=True,mode='min')
     fitArgs={'callbacks':earlyCallback,'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
     
     
@@ -125,6 +125,7 @@ if __name__ == "__main__":
     data=np.array(data,dtype='float32')/255.00
     targets=np.array(targets,dtype='float32')
     
+    
     resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling=None)
     flat=tf.keras.layers.Flatten()(resNet.output)
     output1=tf.keras.layers.Dense(128,activation='relu')(flat)
@@ -132,14 +133,20 @@ if __name__ == "__main__":
     cnn=tf.keras.models.Model(inputs=resNet.input,outputs=output2)
  
         
-    cnn.compile(optimizer=optimize,loss=lossfxn)  
+    cnn.compile(optimizer=optimize,loss=lossfxn,metrics=['accuracy'])  
     cnn.summary()
     
     #fitArgs.update(x=data,y=targets)
     #cnn.fit(x=data,y=targets,**fitArgs)
     
     
-    cnn.fit(x=data,y=targets,**fitArgs) 
+    x_train, x_test, y_train, y_test=train_test_split(data,targets,test_size=0.20,random_state=1738)
+    
+    
+    
+    cnn.fit(x=x_train,y=y_train,validation_split=0.1,**fitArgs) 
+    
+    #cnn=tf.keras.models.load_model(modelPath)
     
     #cnn.save(modelPath,save_format="h5")
     
@@ -157,10 +164,28 @@ if __name__ == "__main__":
     im = tf.keras.preprocessing.image.img_to_array(im)
     im=np.array(im)
     im=np.expand_dims(im,axis=0)
-    pred=cnn.predict(data)
-    print(targets)
+    pred=cnn.predict(x_test)
+    print(y_test)
     print(pred)
-    print(targets-pred)
+    print(y_test-pred)
+    cnn.evaluate(x_test,y_test)
     
     
+    # for image, coords in zip(x_test, y_test):
+    #     #print(coords)
+    #     sX,sY,eX,eY=coords*224;
+    #     sX,sY,eX,eY=int(sX),int(sY),int(eX),int(eY)    
+    
+    
+    #     cv2.rectangle(image,(sX,sY),(eX,eY),(0,0,255),2)
+    #     plt.pyplot.figure()
+    #     plt.pyplot.imshow(image)
+    
+    
+    # image=x_test[0]
+    # coords=y_test[0]
+    # sX,sY,eX,eY=coords*224;
+    # sX,sY,eX,eY=int(sX),int(sY),int(eX),int(eY) 
+    # disp=cv2.rectangle(image,(sX,sY),(eX,eY),(0,0,255),2)
+    # cv2.imshow('Loc',disp)
     
