@@ -102,6 +102,8 @@ for imPathB,imPathN in zip(flour,nissl):
     
     xScaleFac=(bxDiff/nxDiff)
     yScaleFac=(byDiff/nyDiff)
+    # xScaleFac=(nxDiff/bxDiff)
+    # yScaleFac=(nyDiff/byDiff)
     
     nisslIm=pil.Image.open(imPathN)
     w,h=nisslIm.width,nisslIm.height
