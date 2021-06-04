@@ -42,8 +42,8 @@ if __name__ == "__main__":
     #filtNo=3
     #kSize=(35,35)
     
-    #noEpochs=1000000
-    noEpochs=7500
+    noEpochs=1030000
+    #noEpochs=7500
     unitsPerLayer=int(noUnits/noLayers)
     targetShape=(224,224)
     
