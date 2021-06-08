@@ -17,17 +17,27 @@ import PIL as pil
 from statistics import median
 import matplotlib.pyplot as plt
 
-physDevs=tf.config.list_physical_devices('GPU')
-#tf.config.experimental.set_memory_growth(physDevs[0], enable=True)
 
-#def train(cnn):
+physDevs=tf.config.list_physical_devices('GPU')
+
     
    
 
 
 
 if __name__ == "__main__":
+    
+    #Training Parameters
+    noEpochs=1030000
+    targetShape=(224,224)
     lR=1.0#0.005
+    tolerance=15
+    batchSize=25
+    delta=.0005
+    
+    #Location of repo, probably dont need later
+    basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
+    
     noUnits=128
     noLayers=1
     #acFunc='sigmoid'
@@ -36,22 +46,18 @@ if __name__ == "__main__":
     optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
     #lossfxn='mse'
     lossfxn='MeanAbsolutePercentageError'
-    tolerance=15
-    batchSize=25
-    delta=.0005
+    
     #filtNo=3
     #kSize=(35,35)
     
-    noEpochs=1030000
-    #noEpochs=7500
+    
     unitsPerLayer=int(noUnits/noLayers)
-    targetShape=(224,224)
     
     
-    basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
+    
+    #pathing
     imPath=os.path.sep.join([basePath,r'Images'])
     annotPath=os.path.sep.join([basePath,r'Data.csv'])
-    
     
     outputBase=r'Output'
     modelPath=os.path.sep.join([basePath,outputBase,'locator.h5'])
@@ -59,13 +65,13 @@ if __name__ == "__main__":
     testNames=os.path.sep.join([basePath,outputBase,'testImages.txt'])
     
     
-    
-    #earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='val_loss',min_delta=delta,patience=tolerance,restore_best_weights=True,mode='auto')
-    #earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=delta, patience=tolerance,restore_best_weights=True,mode='auto')
+    # Training Params cont
+    # # earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='val_loss',min_delta=delta,patience=tolerance,restore_best_weights=True,mode='auto')
+    # # earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=delta, patience=tolerance,restore_best_weights=True,mode='auto')
    
-    #checkpoint=tf.keras.callbacks.ModelCheckpoint(os.path.sep.join([basePath,outputBase,'Checkpoint.h5']),save_best_only=True,period=5)
-    #fitArgs={'callbacks':[earlyCallback,checkpoint],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
-    #fitArgs={'callbacks':[earlyCallback],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
+    # # checkpoint=tf.keras.callbacks.ModelCheckpoint(os.path.sep.join([basePath,outputBase,'Checkpoint.h5']),save_best_only=True,period=5)
+    # # fitArgs={'callbacks':[earlyCallback,checkpoint],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
+    # # fitArgs={'callbacks':[earlyCallback],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
 
     fitArgs={'verbose':1,'epochs':noEpochs,'batch_size':batchSize}
     
@@ -77,130 +83,71 @@ if __name__ == "__main__":
     
     
     
-    
+    #open labeled data
     rows=open(annotPath).read().strip().split("\n")
     rows=rows[1:]
     
+    #initialize variables
     data = []
     targets = []
     filenames = []
     
-    
+    #load labeled data for every image
     for row in rows:
+        #separate labeled data into image filename and 4 coordinates, read image 
         (fileName, sX, sY, eX, eY) = row.split(",")
-        
-        
-        
         indivImP=os.path.sep.join([imPath,fileName])
         im = cv2.imread(indivImP)
        
         
-        (h,w) = im.shape[:2]
-        
-       
-        
-        
-        # sX=(float(sX)/w)
-        # sY=(float(sY)/h)
-        # eX=(float(eX)/w)
-        # eY=(float(eY)/h)
-        
-            
-        #im = tf.keras.preprocessing.image.load_img(indivImP,target_size=targetShape,color_mode="grayscale")
+        #load image for network input, reformat, get shape, convert to np array
         im = tf.keras.preprocessing.image.load_img(indivImP,target_size=targetShape)
         im = tf.keras.preprocessing.image.img_to_array(im)
-        #im=im[:,:,0]
         im=np.expand_dims(im,-1)
-        
         shp=im.shape
-        
         im=np.array(im)
         
-        
+        #append appropriate information to input / output variables
         data.append(im)
         targets.append((sX,sY,eX,eY))
         #targets.append([[sX],[sY],[eX],[eY]])
         filenames.append(fileName)
         
-    
-    
-    # cnn=tf.keras.Sequential()
-    
-    # for i in range(noLayers):
-    #     #cnn.add(tf.keras.layers.Conv2D(
-    #     #    (filtNo),kSize,input_shape=(4124,5808,3,),kernel_initializer='glorot_uniform',use_bias=True,padding='valid'
-    #     #    ))
-    #     cnn.add(tf.keras.layers.Conv2D(
-    #         (filtNo),kSize,input_shape=(shp)))
-    #     cnn.add(tf.keras.layers.MaxPool2D(pool_size=kSize,strides=(1,1),padding='valid'))
-        
-    # #cnn.summary()
-    # cnn.add(tf.keras.layers.Dense(
-    #      50,activation=acFunc,use_bias=False))   
-    # #cnn.add(tf.keras.layers.Dense(
-    # #     unitsPerLayer,activation=acFunc,use_bias=False))   
-    # #cnn.add(tf.keras.layers.Dense(
-    # #     unitsPerLayer/2,activation=acFunc,use_bias=False))   
-    # #cnn.add(tf.keras.layers.Dense(
-    # #     unitsPerLayer/4,activation=acFunc,use_bias=False))   
-    # cnn.add(tf.keras.layers.Flatten())
-    # cnn.add(tf.keras.layers.Dense(4,activation='sigmoid'))
-    
-      
-        
+   
+    #normalize input, convert to approrpriate datatype 
     data=np.array(data,dtype='float32')/255.00
     targets=np.array(targets,dtype='float32')
     
-    
+    #Model building: ResNet50V2 as base with dense layers before output
     resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
-    #resNet= tf.keras.applications.ResNet50V2(include_top=True,weights='imagenet',pooling='avg')
     flat=tf.keras.layers.Flatten()(resNet.output)
     output1=tf.keras.layers.Dense(128,activation=acFunc,use_bias=True)(flat)
     output2=tf.keras.layers.Dense(64,activation=acFunc,use_bias=True)(output1)
     output3=tf.keras.layers.Dense(4,activation='linear',use_bias=True)(output2)
     cnn=tf.keras.models.Model(inputs=resNet.input,outputs=output3)
  
-        
+    #compile network and display summary
     cnn.compile(optimizer=optimize,loss=lossfxn,metrics=['accuracy'])  
     cnn.summary()
-    
-    #fitArgs.update(x=data,y=targets)
-    #cnn.fit(x=data,y=targets,**fitArgs)
-    
-    
+
+    #separate labeled data into test and training inputs/outputs
     x_train, x_test, y_train, y_test=train_test_split(data,targets,test_size=0.20,random_state=1738)
+
     
-    
-    # x_train=data[0:2,:,:,:]
-    # y_train=targets[0:2,:]
-    
-    #hist=cnn.fit(x=x_train,y=y_train,validation_split=0.30,**fitArgs) 
+    #Train network
     hist=cnn.fit(x=x_train,y=y_train,**fitArgs) 
     
+    #display loss and accuracy plots
     plt.plot(hist.history['loss'])
     plt.ylim([0,10])
     plt.show()
     plt.plot(hist.history['accuracy'])
     plt.show()
-    #cnn=tf.keras.models.load_model(modelPath)
-    #cnn=tf.keras.models.load_model(os.path.sep.join([basePath,outputBase,r"Checkpoint - Copy.h5"]))
-    #cnn.save(modelPath,save_format="h5")
+
+    
     
 
-    # p=multiprocessing.Process(target=train,args=(rtrnModel))
-    # p.start()
-    # p.join()
-    
-    
-    
-    # targ=[sX,sY,eX,eY]
-    # indivImP=os.path.sep.join([imPath,fileName])
-    # im = cv2.imread(indivImP)
-    # im = tf.keras.preprocessing.image.load_img(indivImP,target_size=targetShape,color_mode='grayscale')
-    # im = tf.keras.preprocessing.image.img_to_array(im)
-    # im=np.array(im)
-    # im=np.expand_dims(im,axis=0)
-    
+    #Display testing labels, predictions, and differences
     print('\nTesting Data\n')
     pred=cnn.predict(x_test)
     print(y_test)
@@ -208,11 +155,16 @@ if __name__ == "__main__":
     print(y_test-pred)
     cnn.evaluate(x_test,y_test)
     
-    
+    #Display training labels, predictions, and differences
+    print('\nTraining Data\n')
+    pred=cnn.predict(x_train)
+    print(pred)
+    print(y_train)
+    print(y_train-pred)
     
 
     
-   
+   #iteratie through testing or training images and plot labels vs predictions
     for image, coords, targ in zip(x_test, pred, y_test):
     #for image, coords, targ in zip(x_train, pred, y_train):
         #print(coords)
@@ -241,9 +193,4 @@ if __name__ == "__main__":
         plt.figure()
         plt.imshow(image)
     
-    print('\nTraining Data\n')
-    pred=cnn.predict(x_train)
-    print(pred)
-    print(y_train)
-    print(y_train-pred)
-    
+   
