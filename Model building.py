@@ -24,18 +24,19 @@ physDevs=tf.config.list_physical_devices('GPU')
     
 def buildHyperModel(hp):
     lR=hp.Float('learning_rate',0.01,1.00,sampling='log')
+    #lR=0.96443
     optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
     lossfxn='mse'
     
     
     #resNet = kt.applications.HyperResNet(include_top=False,input_shape=(224,224,3))
     
-    if hp.Choice('Layers',[50, 101, 152],default = 50) == 50:
+    if hp.Choice('Layers',[50, 101],default = 50) == 50:
         resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
-    elif hp.Choice('Layers',[50, 101, 152],default = 50) == 101:
+    elif hp.Choice('Layers',[50, 101],default = 50) == 101:
         resNet= tf.keras.applications.ResNet101V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
-    elif hp.Choice('Layers',[50, 101, 152],default = 50) == 152:    
-        resNet= tf.keras.applications.ResNet152V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
+    #elif hp.Choice('Layers',[50, 101, 152],default = 50) == 152:    
+        #resNet= tf.keras.applications.ResNet152V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
 
     
     
@@ -55,7 +56,7 @@ def buildHyperModel(hp):
 
     
 #Training Parameters
-noEpochs=1030000
+noEpochs=20#1030000
 targetShape=(224,224)
 #lR=1.0#0.005
 tolerance=15
@@ -94,11 +95,11 @@ testNames=os.path.sep.join([basePath,outputBase,'testImages.txt'])
 
 # Training Params cont
 # # earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='val_loss',min_delta=delta,patience=tolerance,restore_best_weights=True,mode='auto')
-earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=delta, patience=tolerance,restore_best_weights=True,mode='auto')
+earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='mean_absolute_error', min_delta=delta, patience=tolerance,restore_best_weights=True,mode='auto')
    
 # # checkpoint=tf.keras.callbacks.ModelCheckpoint(os.path.sep.join([basePath,outputBase,'Checkpoint.h5']),save_best_only=True,period=5)
 # # fitArgs={'callbacks':[earlyCallback,checkpoint],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
-# # fitArgs={'callbacks':[earlyCallback],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
+fitArgs={'callbacks':[earlyCallback],'verbose':1,'batch_size':batchSize,'epochs':1030000}
 
 #fitArgs={'verbose':1,'epochs':noEpochs,'batch_size':batchSize}
 
@@ -200,7 +201,7 @@ skf=StratifiedKFold(n_splits=5,random_state=1738,shuffle=True)
 hist=[]
 pxError=np.empty([skf.get_n_splits(),1])
 
-skf=StratifiedKFold(n_splits=5,random_state=1738,shuffle=True)
+skf=StratifiedKFold(n_splits=3,random_state=1738,shuffle=True)
 for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     print("TRAIN:", train_index, "TEST:", test_index)
     x_train=data[train_index,:,:,:,:]
@@ -211,7 +212,7 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
 
 
     #Train network
-    hist.append(cnn.fit(x=x_train,y=y_train) )
+    hist.append(cnn.fit(x=x_train,y=y_train,**fitArgs) )
     
     
     
