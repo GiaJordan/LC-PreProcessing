@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import cv2
 import numpy as np
-from math import floor
+from math import floor, sqrt
 from statistics import median, mean
 import PIL as pil
 
 
-from sklearn.model_selection import RepeatedKFold, cross_val_score, StratifiedKFold
+from sklearn.model_selection import RepeatedKFold, cross_val_score, StratifiedKFold, train_test_split
 import keras_tuner as kt
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 
@@ -23,18 +23,22 @@ physDevs=tf.config.list_physical_devices('GPU')
 
     
 def buildHyperModel(hp):
-    lR=hp.Float('learning_rate',0.01,1.00,sampling='log')
+    lR=hp.Float('learning_rate',0.01,1.00,sampling='linear')
     #lR=0.96443
-    optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
-    lossfxn='mse'
+    if hp.Choice('Optimizer',['Adam','Adagrad'],default='Adagrad')=='Adam':
+        optimize=tf.keras.optimizers.Adam(learning_rate=lR)
+    elif hp.Choice('Optimizer',['Adam','Adagrad'],default='Adagrad')=='Adagrad':
+        optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
+    #lossfxn='mse'
+    lossfxn=hp.Choice('Loss',['mse','mean_absolute_percentage_error','mean_absolute_error'],default='mse')
     
     
     #resNet = kt.applications.HyperResNet(include_top=False,input_shape=(224,224,3))
     
-    if hp.Choice('Layers',[50, 101],default = 50) == 50:
-        resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
-    elif hp.Choice('Layers',[50, 101],default = 50) == 101:
-        resNet= tf.keras.applications.ResNet101V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
+    #if hp.Choice('Layers',[50, 101],default = 50) == 50:
+    resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
+    #elif hp.Choice('Layers',[50, 101],default = 50) == 101:
+        #resNet= tf.keras.applications.ResNet101V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
     #elif hp.Choice('Layers',[50, 101, 152],default = 50) == 152:    
         #resNet= tf.keras.applications.ResNet152V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
 
@@ -53,7 +57,8 @@ def buildHyperModel(hp):
 
 def buildModel():
     lR=0.95
-    optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
+    #optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
+    optimize=tf.keras.optimizers.Adam(learning_rate=lR)
     lossfxn='mse'
     
     
@@ -83,19 +88,20 @@ def buildModel():
 
 
 
-hyperSearch=0
+hyperSearch=1
 
     
 #Training Parameters
-noEpochs=1030000
+noEpochs=10000#1030000
 targetShape=(224,224)
 #lR=1.0#0.005
-tolerance=20
+tolerance=5
 batchSize=1
 delta=1
 
 #Location of repo, probably dont need later
-basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
+#basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
+basePath=os.getcwd()
 
 noUnits=128
 noLayers=1
@@ -119,7 +125,7 @@ imPath=os.path.sep.join([basePath,r'Images'])
 annotPath=os.path.sep.join([basePath,r'Data.csv'])
 
 outputBase=r'Output'
-modelPath=os.path.sep.join([basePath,outputBase,'locatorOpt.h5'])
+modelPath=os.path.sep.join([basePath,outputBase,'locatorOPT.h5'])
 plotPath=os.path.sep.join([basePath,outputBase,'plot.png'])
 testNames=os.path.sep.join([basePath,outputBase,'testImages.txt'])
 
@@ -130,9 +136,9 @@ earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=delta, 
    
 # # checkpoint=tf.keras.callbacks.ModelCheckpoint(os.path.sep.join([basePath,outputBase,'Checkpoint.h5']),save_best_only=True,period=5)
 # # fitArgs={'callbacks':[earlyCallback,checkpoint],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
-#fitArgs={'callbacks':[earlyCallback],'verbose':1,'batch_size':batchSize,'epochs':500000}
+#fitArgs={'callbacks':[earlyCallback],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
 
-fitArgs={'verbose':1,'epochs':500000,'batch_size':batchSize}
+fitArgs={'verbose':1,'epochs':noEpochs,'batch_size':batchSize}
 
     
     
@@ -184,7 +190,7 @@ targets=np.array(targets,dtype='float32')
 if hyperSearch:
     tuner=kt.Hyperband(buildHyperModel, \
                           objective='mean_absolute_error', \
-                          max_epochs=noEpochs, \
+                          max_epochs=30, \
                           hyperband_iterations=1, \
                           directory="HP Search", \
                           seed=1738)
@@ -206,7 +212,7 @@ for train_index, val_index in skf.split(targets, group):
 if hyperSearch:
     tuner.search(x_train,y_train, \
             validation_data=[x_val,y_val], \
-            epochs=noEpochs, \
+            epochs=30, \
             callbacks=[earlyCallback] \
                  )
 
@@ -218,7 +224,8 @@ if hyperSearch:
 
 #separate labeled data into test and training inputs/outputs
 #x_train, x_test, y_train, y_test=train_test_split(data,targets,test_size=0.20,random_state=1738)
-skf=StratifiedKFold(n_splits=3,random_state=1738,shuffle=True)
+#cnn=tf.keras.models.load_model(modelPath)
+skf=StratifiedKFold(n_splits=2,random_state=1738,shuffle=True)
 hist=[]
 pxError=np.empty([skf.get_n_splits(),1])
 
@@ -257,6 +264,16 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     print(pred)
     print(y_test-pred)
     cnn.evaluate(x_test,y_test)
+    
+    
+    # for prediction,value in zip(pred,y_test):
+        
+    #     d1=sqrt(((prediction[0]-value[0])**2)+((prediction[1]-value[1])**2))
+    #     d2=sqrt(((prediction[2]-value[2])**2)+((prediction[3]-value[3])**2))
+        
+    #     print(d1,d2)
+    #     print(mean([d1,d2]))
+    
     
     file.write(str(pred))
     file.write("\n")
