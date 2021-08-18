@@ -27,7 +27,7 @@ basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
 imPath=os.path.sep.join([basePath,r'Images'])
 #annotPath=os.path.sep.join([basePath,r'Data.csv'])
 outputBase=r'Output'
-modelPath=os.path.sep.join([basePath,outputBase,'locator.h5'])
+modelPath=os.path.sep.join([basePath,outputBase,'locatorOPT.h5'])
 plotPath=os.path.sep.join([basePath,outputBase,'plot.png'])
 testNames=os.path.sep.join([basePath,outputBase,'testImages.txt'])
 
@@ -116,13 +116,13 @@ for imPathB,imPathN in zip(flour,nissl):
     bTargs=annots.loc[imPathB==annots.Name,:]
     nTargs=annots.loc[imPathN==annots.Name,:]
     
-    bt1,bt2,bt3,bt4=int(bTargs.x1),int(bTargs.y1),int(bTargs.x2),int(bTargs.y2)
-    nt1,nt2,nt3,nt4=int(nTargs.x1),int(nTargs.y1),int(nTargs.x2),int(nTargs.y2)
+    # bt1,bt2,bt3,bt4=int(bTargs.x1),int(bTargs.y1),int(bTargs.x2),int(bTargs.y2)
+    # nt1,nt2,nt3,nt4=int(nTargs.x1),int(nTargs.y1),int(nTargs.x2),int(nTargs.y2)
     
-    bLabels=[bt1,bt2,bt3,bt4]
-    nLabels=[nt1,nt2,nt3,nt4]
+    # bLabels=[bt1,bt2,bt3,bt4]
+    # nLabels=[nt1,nt2,nt3,nt4]
     
-    print(bLabels,bPred,nLabels,nPred)
+    # print(bLabels,bPred,nLabels,nPred)
     
     # d1=sqrt(((bx1-bt1)**2)+((by1-bt2)**2))
     # d2=sqrt(((bx2-bt3)**2)+((by2-bt4)**2))
@@ -137,23 +137,23 @@ for imPathB,imPathN in zip(flour,nissl):
     # print("Nissil: " + str(mean([d1,d2])))
   
     
-    bx1,by1,bx2,by2=int(bx1*(225/5808)),int(by1*(225/4124)),int(bx2*(225/5808)),int(by2*(225/4124))    
-    nx1,ny1,nx2,ny2=int(nx1*(225/5808)),int(ny1*(225/4124)),int(nx2*(225/5808)),int(ny2*(225/4124))  
+    bx1,by1,bx2,by2=int(bx1*(225)),int(by1*(225)),int(bx2*(225)),int(by2*(225))    
+    nx1,ny1,nx2,ny2=int(nx1*(225)),int(ny1*(225)),int(nx2*(225)),int(ny2*(225))  
+    
+    
+    bt1,bt2,bt3,bt4=int(bTargs.x1*(255/9369)),int(bTargs.y1*(255/7487)),int(bTargs.x2*(255/9369)),int(bTargs.y2*(255/7487))
+    nt1,nt2,nt3,nt4=int(nTargs.x1*(255/9369)),int(nTargs.y1*(255/7487)),int(nTargs.x2*(255/9369)),int(nTargs.y2*(255/7487))
     
     
     
-    bt1,bt2,bt3,bt4=int(bTargs.x1*(225/9369)),int(bTargs.y1*(225/7487)),int(bTargs.x2*(225/9369)),int(bTargs.y2*(225/7487))
-    nt1,nt2,nt3,nt4=int(nTargs.x1*(225/9369)),int(nTargs.y1*(225/7487)),int(nTargs.x2*(225/9369)),int(nTargs.y2*(225/7487))
-    
-    
-    cv2.rectangle(imB,(bt1,bt2),(bt3,bt4),(0,0,255),2)
-    cv2.rectangle(imB,(bx1,by1),(bx2,by2),(255,0,0),2)
     plt.pyplot.figure()
+    cv2.rectangle(imB,(bt1,bt2),(bt3,bt4),(0,0,255),3)
+    cv2.rectangle(imB,(bx1,by1),(bx2,by2),(255,0,0),2)
     plt.pyplot.imshow(imB)
     
-    cv2.rectangle(imN,(nt1,nt2),(nt3,nt4),(0,0,255),2)
-    cv2.rectangle(imN,(nx1,ny1),(nx2,ny2),(255,0,0),2)
     plt.pyplot.figure()
+    cv2.rectangle(imN,(nt1,nt2),(nt3,nt4),(0,0,255),3)
+    cv2.rectangle(imN,(nx1,ny1),(nx2,ny2),(255,0,0),2)  
     plt.pyplot.imshow(imN)
     
     #clear variables holding the images

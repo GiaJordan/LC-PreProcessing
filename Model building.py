@@ -23,6 +23,7 @@ physDevs=tf.config.list_physical_devices('GPU')
 
     
 def buildHyperModel(hp):
+    acFunc='sigmoid'
     lR=hp.Float('learning_rate',0.01,1.00,sampling='linear')
     #lR=0.96443
     if hp.Choice('Optimizer',['Adam','Adagrad'],default='Adagrad')=='Adam':
@@ -56,69 +57,55 @@ def buildHyperModel(hp):
     return model
 
 def buildModel():
-    lR=0.95
+    lR=0.00001
     #optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
     optimize=tf.keras.optimizers.Adam(learning_rate=lR)
-    lossfxn='mse'
-    
+    #lossfxn='mean_absolute_percentage_error'
+    lossfxn='mean_absolute_error'
+    #lossfxn='mse'    
+    acFunc='sigmoid'
     
     
     #Model building: ResNet50V2 as base with dense layers before output
     resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
     flat=tf.keras.layers.Flatten()(resNet.output)
-    output1=tf.keras.layers.Dense(128,activation=acFunc,use_bias=True)(flat)
-    output2=tf.keras.layers.Dense(64,activation=acFunc,use_bias=True)(output1)
-    output3=tf.keras.layers.Dense(4,activation='linear',use_bias=True)(output2)
-    model=tf.keras.models.Model(inputs=resNet.input,outputs=output3)
+    output1=tf.keras.layers.Dense(256,activation=acFunc,use_bias=True)(flat)
+    output2=tf.keras.layers.Dense(128,activation=acFunc,use_bias=True)(output1)
+    output3=tf.keras.layers.Dense(64,activation=acFunc,use_bias=True)(output2)
+    output4=tf.keras.layers.Dense(32,activation=acFunc,use_bias=True)(output3)
+    #output5=tf.keras.layers.Dense(4,activation='linear',use_bias=True)(output4)
+    output5=tf.keras.layers.Dense(4,activation='sigmoid',use_bias=True)(output4)
+    model=tf.keras.models.Model(inputs=resNet.input,outputs=output5)
      
-    
-    
+    # linear
+    # [[1854. 2028. 3744. 1644.]]
+    # [[1854.3467 2029.8806 3760.8591 1654.9487]]
+    # [[ -0.3466797  -1.8806152 -16.85913   -10.94873  ]]
         
     
         
     #compile network and display summary
     model.compile(optimizer=optimize,loss=lossfxn,metrics=['mean_absolute_error','mean_absolute_percentage_error']) 
     model.summary()
-    
-        
-    
-    
+
     return model
 
 
 
 
-hyperSearch=1
+hyperSearch=0
 
     
 #Training Parameters
-noEpochs=10000#1030000
+noEpochs=5000#1000000
 targetShape=(224,224)
-#lR=1.0#0.005
-tolerance=5
+tolerance=10
 batchSize=1
-delta=1
+delta=.0025 
 
 #Location of repo, probably dont need later
 #basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
 basePath=os.getcwd()
-
-noUnits=128
-noLayers=1
-
-acFunc='sigmoid'
-#optimize=tf.keras.optimizers.Adam(learning_rate=lR)
-#optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
-lossfxn='mse'
-#lossfxn='MeanAbsolutePercentageError'
-
-#filtNo=3
-#kSize=(35,35)
-
-
-unitsPerLayer=int(noUnits/noLayers)
-
-
 
 #pathing
 imPath=os.path.sep.join([basePath,r'Images'])
@@ -134,18 +121,12 @@ testNames=os.path.sep.join([basePath,outputBase,'testImages.txt'])
 # # earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='val_loss',min_delta=delta,patience=tolerance,restore_best_weights=True,mode='auto')
 earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=delta, patience=tolerance,restore_best_weights=True,mode='auto')
    
-# # checkpoint=tf.keras.callbacks.ModelCheckpoint(os.path.sep.join([basePath,outputBase,'Checkpoint.h5']),save_best_only=True,period=5)
+checkpoint=tf.keras.callbacks.ModelCheckpoint(os.path.sep.join([basePath,outputBase,'Checkpoint2.h5']),save_best_only=True,period=5)
 # # fitArgs={'callbacks':[earlyCallback,checkpoint],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
 #fitArgs={'callbacks':[earlyCallback],'verbose':1,'batch_size':batchSize,'epochs':noEpochs}
 
 fitArgs={'verbose':1,'epochs':noEpochs,'batch_size':batchSize}
 
-    
-    
-    
- 
-    
-    
     
 
 #open labeled data
@@ -158,6 +139,9 @@ targets = []
 filenames = []
 group=[]
 
+w=5808
+h=4124
+
 #load labeled data for every image
 for row in rows:
     #separate labeled data into image filename and 4 coordinates, read image 
@@ -165,6 +149,8 @@ for row in rows:
     indivImP=os.path.sep.join([imPath,fileName])
     im = cv2.imread(indivImP)
    
+    
+    sX, sY, eX, eY,=float(sX),float(sY),float(eX),float(eY)
     
     #load image for network input, reformat, get shape, convert to np array
     im = tf.keras.preprocessing.image.load_img(indivImP,target_size=targetShape)
@@ -175,12 +161,16 @@ for row in rows:
     
     #append appropriate information to input / output variables
     data.append(im)
-    targets.append((sX,sY,eX,eY))
+    #targets.append((sX,sY,eX,eY))
+    targets.append((sX/w,sY/h,eX/w,eY/h))
     group.append(g)
     #targets.append([[sX],[sY],[eX],[eY]])
     filenames.append(fileName)
     
    
+
+   
+    
 #normalize input, convert to approrpriate datatype 
 data=np.array(data,dtype='float32')/255.00
 targets=np.array(targets,dtype='float32')
@@ -194,11 +184,6 @@ if hyperSearch:
                           hyperband_iterations=1, \
                           directory="HP Search", \
                           seed=1738)
-
-    
-
-    
-
 
 skf=StratifiedKFold(n_splits=2,random_state=1738,shuffle=True)
 for train_index, val_index in skf.split(targets, group):
@@ -225,12 +210,14 @@ if hyperSearch:
 #separate labeled data into test and training inputs/outputs
 #x_train, x_test, y_train, y_test=train_test_split(data,targets,test_size=0.20,random_state=1738)
 #cnn=tf.keras.models.load_model(modelPath)
-skf=StratifiedKFold(n_splits=2,random_state=1738,shuffle=True)
+skf=StratifiedKFold(n_splits=4,random_state=1738,shuffle=True)
 hist=[]
 pxError=np.empty([skf.get_n_splits(),1])
 
 #skf=StratifiedKFold(n_splits=3,random_state=1738,shuffle=True)
 for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
+    print(i)
+    
     
     modelPath=os.path.sep.join([basePath,outputBase,'locatorStrat'+str(i)+'.h5'])
     print("TRAIN:", train_index, "TEST:", test_index)
@@ -239,7 +226,9 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     
     x_test=data[test_index,:,:,:,:]
     y_test=targets[test_index,:]
-
+    
+    # x_train=x_train[0:2,:,:,:,:]
+    # y_train=y_train[0:2,:]
     
     #Train network
     cnn=buildModel()
@@ -257,6 +246,24 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     plt.show()
     pxError[i]=hist[-1].history['mean_absolute_error'][-1]
     
+    
+    
+    print('\nTraining Data\n')
+    pred=cnn.predict(x_train)
+    print(y_train)
+    print(pred)
+    print(y_train-pred)
+    cnn.evaluate(x_train,y_train)
+    
+    for prediction,value in zip(pred,y_train):
+        
+        d1=sqrt(((prediction[0]*w-value[0]*w)**2)+((prediction[1]*h-value[1]*h)**2))
+        d2=sqrt(((prediction[2]*w-value[2]*w)**2)+((prediction[3]*h-value[3]*h)**2))
+        
+        print(d1,d2)
+        print(mean([d1,d2]))
+    
+    
     #Display testing labels, predictions, and differences
     print('\nTesting Data\n')
     pred=cnn.predict(x_test)
@@ -265,14 +272,14 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     print(y_test-pred)
     cnn.evaluate(x_test,y_test)
     
+    for prediction,value in zip(pred,y_test):
+        
+        d1=sqrt(((prediction[0]*w-value[0]*w)**2)+((prediction[1]*h-value[1]*h)**2))
+        d2=sqrt(((prediction[2]*w-value[2]*w)**2)+((prediction[3]*h-value[3]*h)**2))
+        
+        print(d1,d2)
+        print(mean([d1,d2]))
     
-    # for prediction,value in zip(pred,y_test):
-        
-    #     d1=sqrt(((prediction[0]-value[0])**2)+((prediction[1]-value[1])**2))
-    #     d2=sqrt(((prediction[2]-value[2])**2)+((prediction[3]-value[3])**2))
-        
-    #     print(d1,d2)
-    #     print(mean([d1,d2]))
     
     
     file.write(str(pred))
@@ -280,47 +287,41 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     file.write(str(y_test-pred))
     file.write("\n\n")
     file.close()
-    #Display training labels, predictions, and differences
-    print('\nTraining Data\n')
-    pred=cnn.predict(x_train)
-    print(y_train)
-    print(pred)
-    print(y_train-pred)
+    
     
      
     #iteratie through testing or training images and plot labels vs predictions
     for image, coords, targ in zip(x_test, pred, y_test):
-      #for image, coords, targ in zip(x_train, pred, y_train):
+    #for image, coords, targ in zip(x_train, pred, y_train):
           #print(coords)
           sX,sY,eX,eY=coords;
           sX2,sY2,eX2,eY2=targ;
          
           image=image[:,:,:,0]
          
-          sX=sX*(225/5808)
-          eX=eX*(225/5808)
+          sX=sX*(225)
+          eX=eX*(225)
          
-          sY=sY*(225/4124)
-          eY=eY*(225/4124)
+          sY=sY*(225)
+          eY=eY*(225)
          
-          sX2=int(sX2*(225/5808))
-          eX2=int(eX2*(225/5808))
+          sX2=int(sX2*(225))
+          eX2=int(eX2*(225))
          
-          sY2=int(sY2*(225/4124))
-          eY2=int(eY2*(225/4124))
+          sY2=int(sY2*(225))
+          eY2=int(eY2*(225))
          
           sX,sY,eX,eY=int(sX),int(sY),int(eX),int(eY)    
      
-     
-          cv2.rectangle(image,(sX,sY),(eX,eY),(0,0,255),2)
-          cv2.rectangle(image,(sX2,sY2),(eX2,eY2),(255,0,0),2)
           plt.figure()
+          cv2.rectangle(image,(sX,sY),(eX,eY),(0,0,255),2)
+          cv2.rectangle(image,(sX2,sY2),(eX2,eY2),(255,0,0),1)
           plt.imshow(image)
      
-        
-        
-print("Average Error: " + str(pxError.mean()))
-file=open("Performance.txt",'a')
-file.write(str(pxError.mean()))
-file.close()
-   
+            
+            
+    print("Average Error: " + str(pxError.mean()))
+    file=open("Performance.txt",'a')
+    file.write(str(pxError.mean()))
+    file.close()
+       
