@@ -102,10 +102,10 @@ for imPathB,imPathN in zip(flour,nissl):
     del imB
   
     #calculate widths and heights of LC boundary for each image
-    bxDiff=(bx2-bx1)
-    byDiff=(by1-by2)
-    nxDiff=(nx2-nx1)
-    nyDiff=(ny1-ny2)
+    bxDiff=(bx2-bx1)*bw
+    byDiff=(by1-by2)*bh
+    nxDiff=(nx2-nx1)*nw
+    nyDiff=(ny1-ny2)*nh
     
     
     #get size ratio of boundarys for each image
