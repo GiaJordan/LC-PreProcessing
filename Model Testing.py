@@ -105,7 +105,8 @@ for imPathB,imPathN in zip(flour,nissl):
     [[bx1,by1,bx2,by2]]=bPred
     [[nx1,ny1,nx2,ny2]]=nPred
  
-    
+    print(bPred,nPred)   
+ 
     #get height, width of images
     (bh,bw) = imB.shape[:2]
     (nh,nw) = imN.shape[:2]
@@ -116,14 +117,20 @@ for imPathB,imPathN in zip(flour,nissl):
     bTargs=annots.loc[imPathB==annots.Name,:]
     nTargs=annots.loc[imPathN==annots.Name,:]
     
-    # bt1,bt2,bt3,bt4=int(bTargs.x1),int(bTargs.y1),int(bTargs.x2),int(bTargs.y2)
-    # nt1,nt2,nt3,nt4=int(nTargs.x1),int(nTargs.y1),int(nTargs.x2),int(nTargs.y2)
+    bt1,bt2,bt3,bt4=int(bTargs.x1),int(bTargs.y1),int(bTargs.x2),int(bTargs.y2)
+    nt1,nt2,nt3,nt4=int(nTargs.x1),int(nTargs.y1),int(nTargs.x2),int(nTargs.y2)
     
     # bLabels=[bt1,bt2,bt3,bt4]
     # nLabels=[nt1,nt2,nt3,nt4]
     
-    # print(bLabels,bPred,nLabels,nPred)
+    bLabels=[bt1/9369,bt2/7487,bt3/9369,bt4/7487]
+    nLabels=[nt1/9369,nt2/7487,nt3/9369,nt4/7487]
     
+    #print(bLabels,bPred,nLabels,nPred)
+    #print(np.multiply(bLabels,255),np.multiply(bPred,255),np.multiply(nLabels,255),np.multiply(nPred,255))
+    
+    
+    ##Euc distance px errors
     # d1=sqrt(((bx1-bt1)**2)+((by1-bt2)**2))
     # d2=sqrt(((bx2-bt3)**2)+((by2-bt4)**2))
     
@@ -160,38 +167,7 @@ for imPathB,imPathN in zip(flour,nissl):
     del imN
     del imB
   
-    
-     
-    
-    
-    #calculate widths and heights of LC boundary for each image
-    bxDiff=(bx2-bx1)
-    byDiff=(by1-by2)
-    nxDiff=(nx2-nx1)
-    nyDiff=(ny1-ny2)
-    
-    
-    #get size ratio of boundarys for each image
-    xScaleFac=(bxDiff/nxDiff)
-    yScaleFac=(byDiff/nyDiff)
-    # xScaleFac=(nxDiff/bxDiff)
-    # yScaleFac=(nyDiff/byDiff)
-    
-    #open full size nissl image
-    nisslIm=pil.Image.open(imPathN)
-    
-    #get width and height
-    w,h=nisslIm.width,nisslIm.height
-    
-    #resize nissl image
-    nisslIm=nisslIm.resize((floor(w*xScaleFac),floor(h*yScaleFac)),resample=pil.Image.LANCZOS)
-    
-    ##alternatively, display resized nissl image
-    #nisslIm.resize((floor(w*xScaleFac),floor(h*yScaleFac)),resample=pil.Image.LANCZOS).show()
-    
-    #save in scaled images directory
-    nisslIm.save(os.path.join('ScaledImages',imPathN))
-    
+
     #clear vars
     del bx1,by1,bx2,by2,nx1,ny1,nx2,ny2
 
