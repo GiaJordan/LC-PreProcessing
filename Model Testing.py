@@ -80,16 +80,18 @@ if 'ScaledImages' not in os.listdir():
 flour.pop(2)
 nissl.pop(2)
 
+trueScale=np.array([9369,7487,9369,7487])
+dispScale=np.array([255,255,255,255])
 #iterate through flourescent-nissl pairs
-for imPathB,imPathN in zip(flour,nissl):
-    #print(imPathB,imPathN)
+for imPathF,imPathN in zip(flour,nissl):
+    #print(imPathF,imPathN)
 
     #load and process flourescent image for network input
-    imB = tf.keras.preprocessing.image.load_img(imPathB,target_size=targetShape)
-    imB = tf.keras.preprocessing.image.img_to_array(imB)
-    imB = np.array(imB)
-    imB=np.expand_dims(imB,0)
-    imB=np.array(imB,dtype='float32')/255.00
+    imF = tf.keras.preprocessing.image.load_img(imPathF,target_size=targetShape)
+    imF = tf.keras.preprocessing.image.img_to_array(imF)
+    imF = np.array(imF)
+    imF=np.expand_dims(imF,0)
+    imF=np.array(imF,dtype='float32')/255.00
     
     #load and process nissl image for network input
     imN = tf.keras.preprocessing.image.load_img(imPathN,target_size=targetShape)
@@ -99,77 +101,97 @@ for imPathB,imPathN in zip(flour,nissl):
     imN=np.array(imN,dtype='float32')/255.00
     
     #get LC boundary predictions from network, assign to coordinate variables
-    bPred=cnn.predict(imB)
-    nPred=cnn.predict(imN)
- 
-    [[bx1,by1,bx2,by2]]=bPred
-    [[nx1,ny1,nx2,ny2]]=nPred
- 
-    print(bPred,nPred)   
- 
-    #get height, width of images
-    (bh,bw) = imB.shape[:2]
-    (nh,nw) = imN.shape[:2]
+    fPred=cnn.predict(imF)[0]
+    nPred=cnn.predict(imN)[0]
+  
+     #clear variables holding the images
+    del imN
+    del imF
     
-    imN=imN[0,:,:,:]
-    imB=imB[0,:,:,:]
+  
+    #load and process flourescent image for network input
+    imF = tf.keras.preprocessing.image.load_img(imPathF)
+    imF = tf.keras.preprocessing.image.img_to_array(imF)
+    imF = np.array(imF)
+    imF=np.array(imF,dtype='float32')/255.00
+    
+    #load and process nissl image for network input
+    imN = tf.keras.preprocessing.image.load_img(imPathN)
+    imN = tf.keras.preprocessing.image.img_to_array(imN)
+    imN = np.array(imN)
+    imN=np.array(imN,dtype='float32')/255.00
+  
+    
+  
+    
+    # imN=imN[0,:,:,:]
+    # imF=imF[0,:,:,:]
        
-    bTargs=annots.loc[imPathB==annots.Name,:]
+    fTargs=annots.loc[imPathF==annots.Name,:]
     nTargs=annots.loc[imPathN==annots.Name,:]
     
-    bt1,bt2,bt3,bt4=int(bTargs.x1),int(bTargs.y1),int(bTargs.x2),int(bTargs.y2)
-    nt1,nt2,nt3,nt4=int(nTargs.x1),int(nTargs.y1),int(nTargs.x2),int(nTargs.y2)
     
-    # bLabels=[bt1,bt2,bt3,bt4]
-    # nLabels=[nt1,nt2,nt3,nt4]
-    
-    bLabels=[bt1/9369,bt2/7487,bt3/9369,bt4/7487]
-    nLabels=[nt1/9369,nt2/7487,nt3/9369,nt4/7487]
-    
-    #print(bLabels,bPred,nLabels,nPred)
-    #print(np.multiply(bLabels,255),np.multiply(bPred,255),np.multiply(nLabels,255),np.multiply(nPred,255))
+    fLabels=int(fTargs.x1),int(fTargs.y1),int(fTargs.x2),int(fTargs.y2)
+    nLabels=int(nTargs.x1),int(nTargs.y1),int(nTargs.x2),int(nTargs.y2)
     
     
-    ##Euc distance px errors
-    # d1=sqrt(((bx1-bt1)**2)+((by1-bt2)**2))
-    # d2=sqrt(((bx2-bt3)**2)+((by2-bt4)**2))
+    fLabels=np.divide(fLabels,trueScale)
+    nLabels=np.divide(nLabels,trueScale)   
     
-    # print(d1,d2)
-    # print("Flour: "+ str(mean([d1,d2])))
+    fCompA=np.multiply(fLabels,trueScale).astype(int)
+    nCompA=np.multiply(nLabels,trueScale).astype(int)
+    fCompP=np.multiply(fPred,trueScale).astype(int)
+    nCompP=np.multiply(nPred,trueScale).astype(int)
     
-    # d1=sqrt(((nx1-nt1)**2)+((ny1-nt2)**2))
-    # d2=sqrt(((nx2-nt3)**2)+((ny2-nt4)**2))
+
+    #Euc distance px errors
+    d1=sqrt(((fCompA[0]-fCompP[0])**2)+((fCompA[1]-fCompP[1])**2))
+    d2=sqrt(((fCompA[2]-fCompP[2])**2)+((fCompA[3]-fCompP[3])**2))
     
-    # print(d1,d2)
-    # print("Nissil: " + str(mean([d1,d2])))
+    #print(d1,d2)
+    print("Flour: "+ str(mean([d1,d2])))
+    
+    d1=sqrt(((nCompA[0]-nCompP[0])**2)+((nCompA[1]-nCompP[1])**2))
+    d2=sqrt(((nCompA[2]-nCompP[2])**2)+((nCompA[3]-nCompP[3])**2))
+    
+    #print(d1,d2)
+    print("Nissil: " + str(mean([d1,d2])))
   
     
-    bx1,by1,bx2,by2=int(bx1*(225)),int(by1*(225)),int(bx2*(225)),int(by2*(225))    
-    nx1,ny1,nx2,ny2=int(nx1*(225)),int(ny1*(225)),int(nx2*(225)),int(ny2*(225))  
+  
+    fShowA=np.multiply(fLabels,dispScale).astype(int)
+    nShowA=np.multiply(nLabels,dispScale).astype(int)
+    fShowP=np.multiply(fPred,dispScale).astype(int)
+    nShowP=np.multiply(nPred,dispScale).astype(int)
     
     
-    bt1,bt2,bt3,bt4=int(bTargs.x1*(255/9369)),int(bTargs.y1*(255/7487)),int(bTargs.x2*(255/9369)),int(bTargs.y2*(255/7487))
-    nt1,nt2,nt3,nt4=int(nTargs.x1*(255/9369)),int(nTargs.y1*(255/7487)),int(nTargs.x2*(255/9369)),int(nTargs.y2*(255/7487))
+    # plt.pyplot.figure()
+    # cv2.rectangle(imF,tuple(fShowA[0:2]),tuple(fShowA[2:4]),(0,0,255),3)
+    # cv2.rectangle(imF,tuple(fShowP[0:2]),tuple(fShowP[2:4]),(255,0,0),2)
+    # plt.pyplot.imshow(imF)
     
-    
+    # plt.pyplot.figure()
+    # cv2.rectangle(imN,tuple(nShowA[0:2]),tuple(nShowA[2:4]),(0,0,255),3)
+    # cv2.rectangle(imN,tuple(nShowP[0:2]),tuple(nShowP[2:4]),(255,0,0),2)  
+    # plt.pyplot.imshow(imN)
     
     plt.pyplot.figure()
-    cv2.rectangle(imB,(bt1,bt2),(bt3,bt4),(0,0,255),3)
-    cv2.rectangle(imB,(bx1,by1),(bx2,by2),(255,0,0),2)
-    plt.pyplot.imshow(imB)
+    cv2.rectangle(imF,tuple(fCompA[0:2]),tuple(fCompA[2:4]),(0,0,255),60)
+    cv2.rectangle(imF,tuple(fCompP[0:2]),tuple(fCompP[2:4]),(255,0,0),40)
+    plt.pyplot.imshow(imF)
     
     plt.pyplot.figure()
-    cv2.rectangle(imN,(nt1,nt2),(nt3,nt4),(0,0,255),3)
-    cv2.rectangle(imN,(nx1,ny1),(nx2,ny2),(255,0,0),2)  
+    cv2.rectangle(imN,tuple(nCompA[0:2]),tuple(nCompA[2:4]),(0,0,255),60)
+    cv2.rectangle(imN,tuple(nCompP[0:2]),tuple(nCompP[2:4]),(255,0,0),40)  
     plt.pyplot.imshow(imN)
     
-    #clear variables holding the images
-    del imN
-    del imB
+    
+    # #clear variables holding the images
+    # del imN
+    # del imF
   
 
-    #clear vars
-    del bx1,by1,bx2,by2,nx1,ny1,nx2,ny2
+
 
 
 

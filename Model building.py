@@ -209,12 +209,15 @@ if hyperSearch:
 
 #separate labeled data into test and training inputs/outputs
 #x_train, x_test, y_train, y_test=train_test_split(data,targets,test_size=0.20,random_state=1738)
-#cnn=tf.keras.models.load_model(modelPath)
+
 skf=StratifiedKFold(n_splits=4,random_state=1738,shuffle=True)
+#cnn=tf.keras.models.load_model(modelPath)
+
+
 hist=[]
 pxError=np.empty([skf.get_n_splits(),1])
 
-#skf=StratifiedKFold(n_splits=3,random_state=1738,shuffle=True)
+
 for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     print(i)
     
@@ -230,21 +233,23 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     # x_train=x_train[0:2,:,:,:,:]
     # y_train=y_train[0:2,:]
     
-    #Train network
-    cnn=buildModel()
-    hist.append(cnn.fit(x=x_train,y=y_train,**fitArgs))
-    cnn.save(modelPath,save_format="h5")
+    # #Train network or Load
+    # cnn=buildModel()
+    # hist.append(cnn.fit(x=x_train,y=y_train,**fitArgs))
+    # cnn.save(modelPath,save_format="h5")
     
-    file=open("Performance.txt",'a')
+    cnn=tf.keras.models.load_model(modelPath)
     
-    #display loss and accuracy plots
-    plt.plot(hist[i].history['loss'])
-    plt.ylim([0,10])
-    plt.show()
-    #plt.plot(hist.history['accuracy'])
-    plt.plot(hist[-1].history['mean_absolute_error'])
-    plt.show()
-    pxError[i]=hist[-1].history['mean_absolute_error'][-1]
+    
+    
+    # #display loss and accuracy plots
+    # plt.plot(hist[i].history['loss'])
+    # plt.ylim([0,10])
+    # plt.show()
+    # #plt.plot(hist.history['accuracy'])
+    # plt.plot(hist[-1].history['mean_absolute_error'])
+    # plt.show()
+    # pxError[i]=hist[-1].history['mean_absolute_error'][-1]
     
     
     
@@ -280,13 +285,13 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
         print(d1,d2)
         print(mean([d1,d2]))
     
+    # file=open("Performance.txt",'a')
     
-    
-    file.write(str(pred))
-    file.write("\n")
-    file.write(str(y_test-pred))
-    file.write("\n\n")
-    file.close()
+    # file.write(str(pred))
+    # file.write("\n")
+    # file.write(str(y_test-pred))
+    # file.write("\n\n")
+    # file.close()
     
     
      
