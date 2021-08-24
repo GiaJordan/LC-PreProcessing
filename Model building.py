@@ -208,22 +208,22 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     # x_train=x_train[0:1,:,:,:,:]
     # y_train=y_train[0:1,:]
     
-    #Train network or Load
-    cnn=buildModel()
-    hist.append(cnn.fit(x=x_train,y=y_train,**fitArgs))
-    cnn.save(modelPath,save_format="h5")
-    #cnn=tf.keras.models.load_model(modelPath)
+    # #Train network or Load
+    # cnn=buildModel()
+    # hist.append(cnn.fit(x=x_train,y=y_train,**fitArgs))
+    # cnn.save(modelPath,save_format="h5")
+    cnn=tf.keras.models.load_model(modelPath)
     
     
     
-    #display loss and accuracy plots
-    plt.plot(hist[i].history['loss'])
-    plt.ylim([0,10])
-    plt.show()
-    #plt.plot(hist.history['accuracy'])
-    plt.plot(hist[-1].history['mean_absolute_error'])
-    plt.show()
-    pxError[i]=hist[-1].history['mean_absolute_error'][-1]
+    # #display loss and accuracy plots
+    # plt.plot(hist[i].history['loss'])
+    # plt.ylim([0,10])
+    # plt.show()
+    # #plt.plot(hist.history['accuracy'])
+    # plt.plot(hist[-1].history['mean_absolute_error'])
+    # plt.show()
+    # pxError[i]=hist[-1].history['mean_absolute_error'][-1]
     
     
     #Display training labels, predictions, and differences

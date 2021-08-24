@@ -36,7 +36,7 @@ targetShape=(224,224)
 #load model
 cnn=tf.keras.models.load_model(modelPath)
 
-os.chdir(os.path.join([basePath,"New Images","MMU_35765"]))
+os.chdir(os.path.join(basePath,"New Images","MMU_35765"))
 
 
 
