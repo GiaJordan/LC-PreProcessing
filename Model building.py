@@ -12,57 +12,48 @@ import numpy as np
 from math import floor, sqrt
 from statistics import median, mean
 import PIL as pil
-
-
-from sklearn.model_selection import RepeatedKFold, cross_val_score, StratifiedKFold, train_test_split
+from sklearn.model_selection import RepeatedKFold, cross_val_score, StratifiedKFold, train_test_split, StratifiedShuffleSplit
 import keras_tuner as kt
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 
 
 physDevs=tf.config.list_physical_devices('GPU')
 
-    
+
+#build a model to search hyperparameter space
 def buildHyperModel(hp):
     acFunc='sigmoid'
-    lR=hp.Float('learning_rate',0.01,1.00,sampling='linear')
-    #lR=0.96443
+    lR=hp.Float('learning_rate',0.01,1.00,sampling='log')
     if hp.Choice('Optimizer',['Adam','Adagrad'],default='Adagrad')=='Adam':
         optimize=tf.keras.optimizers.Adam(learning_rate=lR)
     elif hp.Choice('Optimizer',['Adam','Adagrad'],default='Adagrad')=='Adagrad':
         optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
     #lossfxn='mse'
-    lossfxn=hp.Choice('Loss',['mse','mean_absolute_percentage_error','mean_absolute_error'],default='mse')
-    
-    
-    #resNet = kt.applications.HyperResNet(include_top=False,input_shape=(224,224,3))
+    lossfxn=hp.Choice('Loss',['mse','mean_absolute_percentage_error','mean_absolute_error'],default='mean_absolute_error')
     
     #if hp.Choice('Layers',[50, 101],default = 50) == 50:
     resNet= tf.keras.applications.ResNet50V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
     #elif hp.Choice('Layers',[50, 101],default = 50) == 101:
         #resNet= tf.keras.applications.ResNet101V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
     #elif hp.Choice('Layers',[50, 101, 152],default = 50) == 152:    
-        #resNet= tf.keras.applications.ResNet152V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')
-
-    
+        #resNet= tf.keras.applications.ResNet152V2(include_top=False,weights='imagenet',input_shape=(224,224,3),pooling='avg')   
     
     flat=tf.keras.layers.Flatten()(resNet.output)
-    output1=tf.keras.layers.Dense(128,activation=acFunc,use_bias=True)(flat)
-    output2=tf.keras.layers.Dense(64,activation=acFunc,use_bias=True)(output1)
-    output3=tf.keras.layers.Dense(4,activation='linear',use_bias=True)(output2)
-    model=tf.keras.models.Model(inputs=resNet.input,outputs=output3)
+    output1=tf.keras.layers.Dense(256,activation=acFunc,use_bias=True)(flat)
+    output2=tf.keras.layers.Dense(128,activation=acFunc,use_bias=True)(output1)
+    output3=tf.keras.layers.Dense(64,activation=acFunc,use_bias=True)(output2)
+    output4=tf.keras.layers.Dense(32,activation=acFunc,use_bias=True)(output3)
+    output5=tf.keras.layers.Dense(4,activation='sigmoid',use_bias=True)(output4)
+    model=tf.keras.models.Model(inputs=resNet.input,outputs=output5)
      
-   
     model.compile(optimizer=optimize,loss=lossfxn,metrics=['mean_absolute_error','mean_absolute_percentage_error'])
     
     return model
 
 def buildModel():
     lR=0.00001
-    #optimize=tf.keras.optimizers.Adagrad(learning_rate=lR)
     optimize=tf.keras.optimizers.Adam(learning_rate=lR)
-    #lossfxn='mean_absolute_percentage_error'
-    lossfxn='mean_absolute_error'
-    #lossfxn='mse'    
+    lossfxn='mean_absolute_error'   
     acFunc='sigmoid'
     
     
@@ -73,51 +64,41 @@ def buildModel():
     output2=tf.keras.layers.Dense(128,activation=acFunc,use_bias=True)(output1)
     output3=tf.keras.layers.Dense(64,activation=acFunc,use_bias=True)(output2)
     output4=tf.keras.layers.Dense(32,activation=acFunc,use_bias=True)(output3)
-    #output5=tf.keras.layers.Dense(4,activation='linear',use_bias=True)(output4)
     output5=tf.keras.layers.Dense(4,activation='sigmoid',use_bias=True)(output4)
     model=tf.keras.models.Model(inputs=resNet.input,outputs=output5)
-     
-    # linear
-    # [[1854. 2028. 3744. 1644.]]
-    # [[1854.3467 2029.8806 3760.8591 1654.9487]]
-    # [[ -0.3466797  -1.8806152 -16.85913   -10.94873  ]]
-        
-    
         
     #compile network and display summary
     model.compile(optimizer=optimize,loss=lossfxn,metrics=['mean_absolute_error','mean_absolute_percentage_error']) 
-    model.summary()
+    model.summary() 
 
     return model
 
 
 
-
+#bool, do hyperparameter search or no
 hyperSearch=0
 
     
 #Training Parameters
-noEpochs=5000#1000000
-targetShape=(224,224)
-tolerance=10
-batchSize=1
-delta=.0025 
+noEpochs=5000           #training epochs
+targetShape=(224,224)   #Shape to load images as
+tolerance=10            #early stopping epochs without improvement
+delta=.0025             #minimum imrovement for early stopping 
+testSize=0.20           #fraction of dataset to use for test split
+batchSize=1             #batch size
 
-#Location of repo, probably dont need later
-#basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
+#Location of repo
 basePath=os.getcwd()
-
 #pathing
 imPath=os.path.sep.join([basePath,r'Images'])
 annotPath=os.path.sep.join([basePath,r'Data.csv'])
-
 outputBase=r'Output'
 modelPath=os.path.sep.join([basePath,outputBase,'locatorOPT.h5'])
 plotPath=os.path.sep.join([basePath,outputBase,'plot.png'])
 testNames=os.path.sep.join([basePath,outputBase,'testImages.txt'])
 
 
-# Training Params cont
+# Training fit arguments
 # # earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='val_loss',min_delta=delta,patience=tolerance,restore_best_weights=True,mode='auto')
 earlyCallback=tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=delta, patience=tolerance,restore_best_weights=True,mode='auto')
    
@@ -139,6 +120,7 @@ targets = []
 filenames = []
 group=[]
 
+#width and height of training images
 w=5808
 h=4124
 
@@ -161,22 +143,16 @@ for row in rows:
     
     #append appropriate information to input / output variables
     data.append(im)
-    #targets.append((sX,sY,eX,eY))
     targets.append((sX/w,sY/h,eX/w,eY/h))
     group.append(g)
-    #targets.append([[sX],[sY],[eX],[eY]])
     filenames.append(fileName)
     
    
-
-   
-    
 #normalize input, convert to approrpriate datatype 
 data=np.array(data,dtype='float32')/255.00
 targets=np.array(targets,dtype='float32')
 
 
- 
 if hyperSearch:
     tuner=kt.Hyperband(buildHyperModel, \
                           objective='mean_absolute_error', \
@@ -185,7 +161,7 @@ if hyperSearch:
                           directory="HP Search", \
                           seed=1738)
 
-skf=StratifiedKFold(n_splits=2,random_state=1738,shuffle=True)
+skf=StratifiedShuffleSplit(n_splits=2,test_size=testSize,random_state=17)
 for train_index, val_index in skf.split(targets, group):
     print("TRAIN:", train_index, "TEST:", val_index)
     x_train=data[train_index,:,:,:,:]
@@ -208,51 +184,49 @@ if hyperSearch:
     cnn.save(modelPath,save_format="h5")
 
 #separate labeled data into test and training inputs/outputs
-#x_train, x_test, y_train, y_test=train_test_split(data,targets,test_size=0.20,random_state=1738)
-
-skf=StratifiedKFold(n_splits=4,random_state=1738,shuffle=True)
-#cnn=tf.keras.models.load_model(modelPath)
+skf=StratifiedShuffleSplit(n_splits=4,test_size=testSize,random_state=1738)
 
 
 hist=[]
 pxError=np.empty([skf.get_n_splits(),1])
 
-
+#train models on each fold and save
 for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     print(i)
     
-    
+    #set model save path 
     modelPath=os.path.sep.join([basePath,outputBase,'locatorStrat'+str(i)+'.h5'])
+    
+    #split into this folds test and training splits
     print("TRAIN:", train_index, "TEST:", test_index)
     x_train=data[train_index,:,:,:,:]
     y_train=targets[train_index,:]
-    
     x_test=data[test_index,:,:,:,:]
     y_test=targets[test_index,:]
     
-    # x_train=x_train[0:2,:,:,:,:]
-    # y_train=y_train[0:2,:]
+    ##For initial building
+    # x_train=x_train[0:1,:,:,:,:]
+    # y_train=y_train[0:1,:]
     
-    # #Train network or Load
-    # cnn=buildModel()
-    # hist.append(cnn.fit(x=x_train,y=y_train,**fitArgs))
-    # cnn.save(modelPath,save_format="h5")
-    
-    cnn=tf.keras.models.load_model(modelPath)
-    
-    
-    
-    # #display loss and accuracy plots
-    # plt.plot(hist[i].history['loss'])
-    # plt.ylim([0,10])
-    # plt.show()
-    # #plt.plot(hist.history['accuracy'])
-    # plt.plot(hist[-1].history['mean_absolute_error'])
-    # plt.show()
-    # pxError[i]=hist[-1].history['mean_absolute_error'][-1]
+    #Train network or Load
+    cnn=buildModel()
+    hist.append(cnn.fit(x=x_train,y=y_train,**fitArgs))
+    cnn.save(modelPath,save_format="h5")
+    #cnn=tf.keras.models.load_model(modelPath)
     
     
     
+    #display loss and accuracy plots
+    plt.plot(hist[i].history['loss'])
+    plt.ylim([0,10])
+    plt.show()
+    #plt.plot(hist.history['accuracy'])
+    plt.plot(hist[-1].history['mean_absolute_error'])
+    plt.show()
+    pxError[i]=hist[-1].history['mean_absolute_error'][-1]
+    
+    
+    #Display training labels, predictions, and differences
     print('\nTraining Data\n')
     pred=cnn.predict(x_train)
     print(y_train)
@@ -277,21 +251,20 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
     print(y_test-pred)
     cnn.evaluate(x_test,y_test)
     
+    #calculate pixel error 
     for prediction,value in zip(pred,y_test):
-        
         d1=sqrt(((prediction[0]*w-value[0]*w)**2)+((prediction[1]*h-value[1]*h)**2))
         d2=sqrt(((prediction[2]*w-value[2]*w)**2)+((prediction[3]*h-value[3]*h)**2))
-        
         print(d1,d2)
         print(mean([d1,d2]))
     
-    # file=open("Performance.txt",'a')
-    
-    # file.write(str(pred))
-    # file.write("\n")
-    # file.write(str(y_test-pred))
-    # file.write("\n\n")
-    # file.close()
+    #write some metrics to a text file to ref later
+    file=open("Performance.txt",'a')
+    file.write(str(pred))
+    file.write("\n")
+    file.write(str(y_test-pred))
+    file.write("\n\n")
+    file.close()
     
     
      
@@ -324,7 +297,7 @@ for i, [train_index, test_index] in enumerate(skf.split(targets, group)):
           plt.imshow(image)
      
             
-            
+    #print average error for different folds' models
     print("Average Error: " + str(pxError.mean()))
     file=open("Performance.txt",'a')
     file.write(str(pxError.mean()))

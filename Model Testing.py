@@ -20,7 +20,7 @@ from shutil import copyfile
 from math import floor, sqrt
 from statistics import median, mean
 #path to github repo
-basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
+basePath=os.getcwd()
 
 
 #pathing
@@ -36,7 +36,7 @@ targetShape=(224,224)
 #load model
 cnn=tf.keras.models.load_model(modelPath)
 
-os.chdir(r'C:\Gianna\MMU_35765')
+os.chdir(os.path.join([basePath,"New Images","MMU_35765"]))
 
 
 
