@@ -26,7 +26,7 @@ basePath=r"C:\Users\giajordan\Documents\GitHub\LC-PreProcessing"
 imPath=os.path.sep.join([basePath,r'Images'])
 annotPath=os.path.sep.join([basePath,r'Data.csv'])
 outputBase=r'Output'
-modelPath=os.path.sep.join([basePath,outputBase,'locatorOPT.h5'])
+modelPath=os.path.sep.join([basePath,outputBase,'locator.h5'])
 plotPath=os.path.sep.join([basePath,outputBase,'plot.png'])
 testNames=os.path.sep.join([basePath,outputBase,'testImages.txt'])
 
@@ -66,7 +66,10 @@ if 'ScaledImages' not in os.listdir():
     
     for image in originalImages:
         copyfile(image,os.path.join('ScaledImages',image))
-    
+        
+# this is just for the test directory I used to build the script, was missing image names
+# flour.pop(2)
+# nissl.pop(2)
 
 #iterate through flourescent-nissl pairs
 for imPathB,imPathN in zip(flour,nissl):
@@ -108,6 +111,8 @@ for imPathB,imPathN in zip(flour,nissl):
     #get size ratio of boundarys for each image
     xScaleFac=(bxDiff/nxDiff)
     yScaleFac=(byDiff/nyDiff)
+    # xScaleFac=(nxDiff/bxDiff)
+    # yScaleFac=(nyDiff/byDiff)
     
     #open full size nissl image
     nisslIm=pil.Image.open(imPathN)
