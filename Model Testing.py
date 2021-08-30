@@ -77,8 +77,8 @@ if 'ScaledImages' not in os.listdir():
             copyfile(image,os.path.join('ScaledImages',image))
         
 # this is just for the test directory I used to build the script, was missing image names
-#flour.pop(2)
-#nissl.pop(2)
+flour.pop(2)
+nissl.pop(2)
 
 trueScale=np.array([9369,7487,9369,7487])
 dispScale=np.array([255,255,255,255])
