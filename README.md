@@ -1,6 +1,6 @@
 # Locus Coeruleus Pre-processing
  
-## Software to automate scaling of images of brain scans/stains for further analysis.
+## Software to automate scaling of images of brain stains for further analysis.
 A pretrained convultional neural network (ResNet50v2) is used as a network base. Additional layers and training were added. The Network was trained to recognize the borders of the area containing the locus coeruleus in each image, and then resize the shrunken nissl-stained images to align with images of stains that were not shrunken.
 
 An anaconda environment for use with the code is included in <code>environment.yml</code>. Nvidia CuDnn libraries will need to be added to the enviornment's directories. Models are stored in the Output subdirectory and should be unzipped with 7zip before use.
